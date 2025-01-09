@@ -8,7 +8,6 @@ import (
     scp "github.com/bramvdbogaerde/go-scp"
 	"github.com/bramvdbogaerde/go-scp/auth"
 	"golang.org/x/crypto/ssh"
-    "github.com/joho/godotenv"
     "context"
 )
 
@@ -103,56 +102,45 @@ var EventMap = map[string]interface{}{
 
 func main() {
 
-    
-    err := godotenv.Load()
-    if err != nil {
-        fmt.Println("Error loading .env file")
-    }
-
-    serverAddress := os.Getenv("SCP_SERVER")
-    serverPort := os.Getenv("SCP_PORT")
-    serverUser := os.Getenv("SCP_USER")
-    serverIdentity := os.Getenv("SCP_IDENTITY")
+    serverAddress := os.Args[1]
+    serverPort := os.Args[2]
+    serverUser := os.Args[3]
+    serverIdentity := os.Args[4]
 
     clientConfig, _ := auth.PrivateKey(serverUser,serverIdentity, ssh.InsecureIgnoreHostKey())
 
-	for true {
+	for {
 		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Scan()
 		jsonInput := scanner.Text()
 
 		// 汎用のマップにパース
 		var genericEvent map[string]interface{}
-		err = json.Unmarshal([]byte(jsonInput), &genericEvent)
+		err := json.Unmarshal([]byte(jsonInput), &genericEvent)
 		if err != nil {
-			fmt.Println("Error parsing JSON:", err)
 			return
 		}
 
 		// イベントタイプを取得
 		eventType, ok := genericEvent["event"].(string)
 		if !ok {
-			fmt.Println("Invalid event type")
 			return
 		}
 
 		// イベントタイプに対応する構造体を取得
 		eventStruct, ok := EventMap[eventType]
 		if !ok {
-			fmt.Println("Unknown event type")
 			return
 		}
 
 		// 対応する構造体にパース
 		eventBytes, err := json.Marshal(genericEvent)
 		if err != nil {
-			fmt.Println("Error marshaling generic event:", err)
 			return
 		}
 
 		err = json.Unmarshal(eventBytes, &eventStruct)
 		if err != nil {
-			fmt.Println("Error parsing event to struct:", err)
 			return
 		}
 
