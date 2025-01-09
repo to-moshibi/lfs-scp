@@ -233,7 +233,6 @@ func main() {
 				return
 			}
 
-
 			fmt.Println(string(resOut))
 		} else if eventType == "download" {
             cmd := exec.Command("git", "rev-parse", "--git-dir")
@@ -250,9 +249,6 @@ func main() {
                 return
             }
 
-            
-
-            
             var download Download
             err = json.Unmarshal(eventBytes, &download)
             if err != nil {

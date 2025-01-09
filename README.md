@@ -15,8 +15,8 @@ git config lfs.customtransfer.lfs-scp.args "example.com 22 ubuntu ~/.ssh/id_rsa"
 
 ## Upload
 ```sh
-git add .
-git commit -a -m "commit message"
+git add .gitattributes
+git commit -a -m "create .gitattributes"
 git push
 ```
 
