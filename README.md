@@ -8,7 +8,7 @@ git lfs install
 git lfs track "*.png"
 git config lfs.standalonetransferagent lfs-scp
 git config lfs.customtransfer.lfs-scp.path git-lfs
-git config lfs.customtransfer.lfs-scp.args example.com 22 ubuntu ~/.ssh/id_rsa
+git config lfs.customtransfer.lfs-scp.args "example.com 22 ubuntu ~/.ssh/id_rsa"
 ```
 
 # Usage
