@@ -159,6 +159,7 @@ func main() {
 		if eventType == "init" {
 			fmt.Println(InitResponse{})
 		} else if eventType == "upload" {
+
 			var upload Upload
 			err = json.Unmarshal(eventBytes, &upload)
 			if err != nil {
@@ -195,8 +196,8 @@ func main() {
                 fmt.Println(errRes)
                 return
             }
-            f,_:= os.Open(upload.Path)
 
+            f,_:= os.Open(upload.Path)
             defer client.Close()
             defer f.Close()
 
@@ -258,6 +259,106 @@ func main() {
 
 			fmt.Println(string(resOut))
 		} else if eventType == "download" {
+            var download Download
+            err = json.Unmarshal(eventBytes, &download)
+            if err != nil {
+                errRes := DownloadErrorResponse{
+                    Event: "complete",
+                    Oid:   download.Oid,
+                    Error: struct {
+                        Code    int    `json:"code"`
+                        Message string `json:"message"`
+                    }{
+                        Code:    1,
+                        Message: "Error Unmarshal: " + err.Error(),
+                    },
+                }
+                fmt.Println(errRes)
+                return
+            }
+
+            client := scp.NewClient(serverAddress+":"+serverPort, &clientConfig)
+
+            err := client.Connect()
+            if err != nil {
+                errRes := DownloadErrorResponse{
+                    Event: "complete",
+                    Oid:   download.Oid,
+                    Error: struct {
+                        Code    int    `json:"code"`
+                        Message string `json:"message"`
+                    }{
+                        Code:    4,
+                        Message: "Error Connecting: " + err.Error(),
+                    },
+                }
+                fmt.Println(errRes)
+                return
+            }
+
+            f,_:= os.Create(download.Oid)
+            defer client.Close()
+            defer f.Close()
+
+            err = client.CopyFromRemote(context.Background(), f, "/home/"+serverUser+"/storage/"+download.Oid)
+            if err != nil {
+                errRes := DownloadErrorResponse{
+                    Event: "complete",
+                    Oid:   download.Oid,
+                    Error: struct {
+                        Code    int    `json:"code"`
+                        Message string `json:"message"`
+                    }{
+                        Code:    5,
+                        Message: "Error Copying: " + err.Error(),
+                    },
+                }
+                fmt.Println(errRes)
+                return
+            }
+
+            res := DownloadResponse{
+                Event: "complete",
+                Oid:   download.Oid,
+
+            }
+
+            resOut,err := json.Marshal(res)
+            if err != nil {
+                errRes := DownloadErrorResponse{
+                    Event: "complete",
+                    Oid:   download.Oid,
+                    Error: struct {
+                        Code    int    `json:"code"`
+                        Message string `json:"message"`
+                    }{
+                        Code:    2,
+                        Message: "Error Marshal Response: " + err.Error(),
+                    },
+                }
+                fmt.Println(errRes)
+                return
+            }
+            
+            err = os.WriteFile("log", resOut, 0644)
+            if err != nil {
+                errRes := DownloadErrorResponse{
+                    Event: "complete",
+                    Oid:   download.Oid,
+                    Error: struct {
+                        Code    int    `json:"code"`
+                        Message string `json:"message"`
+                    }{
+                        Code:    3,
+                        Message: "Error Logging: " + err.Error(),
+                    },
+                }
+                fmt.Println(errRes)
+                return
+            }
+
+            fmt.Println(string(resOut))
+
 		} else if eventType == "terminate" {
 			break
 		}
