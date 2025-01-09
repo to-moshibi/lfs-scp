@@ -1,5 +1,4 @@
-.env
 id_rsa
 id_rsa.pub
 log
-node_modules
+.env
