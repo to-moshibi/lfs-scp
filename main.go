@@ -2,13 +2,18 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
-    scp "github.com/bramvdbogaerde/go-scp"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"syscall"
+
+	scp "github.com/bramvdbogaerde/go-scp"
 	"github.com/bramvdbogaerde/go-scp/auth"
 	"golang.org/x/crypto/ssh"
-    "context"
 )
 
 type Init struct {
@@ -228,25 +233,26 @@ func main() {
 				return
 			}
 
-			err = os.WriteFile("log", resOut, 0644)
-			if err != nil {
-				errRes := UploadErrorResponse{
-					Event: "complete",
-					Oid:   upload.Oid,
-					Error: struct {
-						Code    int    `json:"code"`
-						Message string `json:"message"`
-					}{
-						Code:    3,
-						Message: "Error Logging: " + err.Error(),
-					},
-				}
-                fmt.Println(errRes)
-				return
-			}
 
 			fmt.Println(string(resOut))
 		} else if eventType == "download" {
+            cmd := exec.Command("git", "rev-parse", "--git-dir")
+            cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+            out,err := cmd.Output()
+            if(err != nil){
+                fmt.Println(err)
+                return
+            }
+            path := strings.TrimSpace(string(out))
+            gitDir,err := absPath(path)
+            if(err != nil){
+                fmt.Println(err)
+                return
+            }
+
+            
+
+            
             var download Download
             err = json.Unmarshal(eventBytes, &download)
             if err != nil {
@@ -267,7 +273,7 @@ func main() {
 
             client := scp.NewClient(serverAddress+":"+serverPort, &clientConfig)
 
-            err := client.Connect()
+            err = client.Connect()
             if err != nil {
                 errRes := DownloadErrorResponse{
                     Event: "complete",
@@ -284,10 +290,12 @@ func main() {
                 return
             }
 
-            f,_:= os.Create(download.Oid)
+            dlFileName := downloadTempPath(gitDir, download.Oid)
+            
+            f,_:= os.OpenFile(dlFileName, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
             defer client.Close()
             defer f.Close()
-
+            
             err = client.CopyFromRemote(context.Background(), f, "/home/"+serverUser+"/storage/"+download.Oid)
             if err != nil {
                 errRes := DownloadErrorResponse{
@@ -304,10 +312,11 @@ func main() {
                 fmt.Println(errRes)
                 return
             }
-
+            
             res := DownloadResponse{
                 Event: "complete",
                 Oid:   download.Oid,
+                Path: dlFileName,
 
             }
 
@@ -328,22 +337,7 @@ func main() {
                 return
             }
             
-            err = os.WriteFile("log", resOut, 0644)
-            if err != nil {
-                errRes := DownloadErrorResponse{
-                    Event: "complete",
-                    Oid:   download.Oid,
-                    Error: struct {
-                        Code    int    `json:"code"`
-                        Message string `json:"message"`
-                    }{
-                        Code:    3,
-                        Message: "Error Logging: " + err.Error(),
-                    },
-                }
-                fmt.Println(errRes)
-                return
-            }
+            f.Close()
 
             fmt.Println(string(resOut))
 
@@ -351,4 +345,21 @@ func main() {
 			break
 		}
 	}
+}
+
+func absPath(path string) (string, error) {
+	if len(path) > 0 {
+		path, err := filepath.Abs(path)
+		if err != nil {
+			return "", err
+		}
+		return filepath.EvalSymlinks(path)
+	}
+	return "", nil
+}
+
+func downloadTempPath(gitDir string, oid string) string {
+	tmpfld := filepath.Join(gitDir, "lfs", "tmp")
+	os.MkdirAll(tmpfld, os.ModePerm)
+	return filepath.Join(tmpfld, oid + ".tmp")
 }

@@ -1,0 +1,1 @@
+{ "event": "download", "oid": "f290febc2960d6714f29e588ce167e940529c6e6f33ccf811fdd962d288a2fc9", "size": 21245, "action": { "href": "nfs://server/path", "header": { "key": "value" } } }

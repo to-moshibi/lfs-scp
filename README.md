@@ -13,8 +13,19 @@ git config lfs.customtransfer.lfs-scp.args "example.com 22 ubuntu ~/.ssh/id_rsa"
 
 # Usage
 
+## Upload
 ```sh
 git add .
 git commit -a -m "commit message"
 git push
+```
+
+## Download
+```sh
+git clone REPOSITORY
+cd REPOSITORY
+git config lfs.standalonetransferagent lfs-scp
+git config lfs.customtransfer.lfs-scp.path lfs-scp
+git config lfs.customtransfer.lfs-scp.args "example.com 22 ubuntu ~/.ssh/id_rsa"
+git reset --hard
 ```
